@@ -194,6 +194,10 @@ void parse_midi_command(snd_seq_t* seq, int port_out_id, char *buf)
 	   mono key pressure    0xD0+C       pressure value   --
 	   pitch bend           0xE0+C       range (LSB)      range (MSB)
 	   system               0xF0+C       manufacturer     model
+	   clock               	0xF8
+	   start               	0xFA
+	   continue             0xFB
+	   stop               	0xFC
 	   -------------------------------------------------------------------
 	   C is the channel number, from 0 to 15;
 	   -------------------------------------------------------------------
@@ -215,7 +219,7 @@ void parse_midi_command(snd_seq_t* seq, int port_out_id, char *buf)
 	snd_seq_ev_set_subs(&ev);
 
 	int operation, channel, param1, param2;
-
+	
 	operation = buf[0] & 0xF0;
 	channel   = buf[0] & 0x0F;
 	param1    = buf[1];
@@ -266,8 +270,44 @@ void parse_midi_command(snd_seq_t* seq, int port_out_id, char *buf)
 			snd_seq_ev_set_pitchbend(&ev, channel, param1 - 8192); // in alsa MIDI we want signed int
 			break;
 
-		/* Not implementing system commands (0xF0) */
-			
+		// system rt messages
+		case 0xF0:
+			switch (buf[0])
+			{
+				case 0xF8:
+					if (!arguments.silent && arguments.verbose) 
+						printf("MIDI Clock         %03u\n", buf[0]);
+					snd_seq_ev_set_fixed(&ev);
+					ev.type = SND_SEQ_EVENT_CLOCK;
+					break;
+				
+				case 0xFA:
+					if (!arguments.silent && arguments.verbose) 
+						printf("MIDI Start         %03u\n", buf[0]);
+					snd_seq_ev_set_fixed(&ev);
+					ev.type = SND_SEQ_EVENT_START;
+					break;
+	
+				case 0xFB:
+					if (!arguments.silent && arguments.verbose) 
+						printf("MIDI Continue         %03u\n", buf[0]);
+					snd_seq_ev_set_fixed(&ev);
+					ev.type = SND_SEQ_EVENT_CONTINUE;
+					break;
+				
+				case 0xFC:
+					if (!arguments.silent && arguments.verbose) 
+						printf("MIDI Stop         %03u\n", buf[0]);
+					snd_seq_ev_set_fixed(&ev);
+					ev.type = SND_SEQ_EVENT_STOP;
+					break;
+
+				default:
+					if (!arguments.silent && arguments.verbose) 
+						printf("Unknown System Message %03u\n", buf[0]);
+					break;
+			}
+			break;
 		default:
 			if (!arguments.silent) 
 				printf("0x%x Unknown MIDI cmd   %03u %03u %03u\n", operation, channel, param1, param2);
@@ -467,6 +507,11 @@ void* read_midi_from_serial_port(void* seq)
 				/* Status byte received and will always be first bit!*/
 				buf[0] = buf[i];
 				i = 1;
+				// midi realtime messages: clock, start, continue, stop 
+				if (buf[0] == 0xF8) i = 3;
+				else if (buf[0] == 0xFA) i = 3;
+				else if (buf[0] == 0xFB) i = 3;
+				else if (buf[0] == 0xFC) i = 3;
 			} else {
 				/* Data byte received */
 				if (i == 2) {
@@ -482,7 +527,6 @@ void* read_midi_from_serial_port(void* seq)
 					}
 				}
 			}
-
 		}
 
 		/* print comment message (the ones that start with 0xFF 0x00 0x00 */
