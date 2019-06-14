@@ -162,14 +162,14 @@ int open_seq(snd_seq_t** seq)
 
 	snd_seq_set_client_name(*seq, arguments.name);
 
-	if ((port_out_id = snd_seq_create_simple_port(*seq, "MIDI out",
+	if ((port_out_id = snd_seq_create_simple_port(*seq, "MIDI in",
 					SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
 					SND_SEQ_PORT_TYPE_APPLICATION)) < 0) 
 	{
 		fprintf(stderr, "Error creating sequencer port.\n");
 	}
 
-	if ((port_in_id = snd_seq_create_simple_port(*seq, "MIDI in",
+	if ((port_in_id = snd_seq_create_simple_port(*seq, "MIDI out",
 					SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE,
 					SND_SEQ_PORT_TYPE_APPLICATION)) < 0) 
 	{
@@ -287,6 +287,9 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 	{
 		snd_seq_event_input(seq_handle, &ev);
 
+		//if (!arguments.silent && arguments.verbose) 
+		//	printf("Alsa midi event %d\n", ev->type); 
+		
 		switch (ev->type) 
 		{
 
@@ -345,27 +348,56 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 					printf("Alsa    0x%x Pitch bend         %03u %5d\n", bytes[0]&0xF0, bytes[0]&0xF, ev->data.control.value);
 				break;
 
+			case SND_SEQ_EVENT_CLOCK :
+				bytes[0] = 0xF8;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi clock\n");
+				break;
+
+			case SND_SEQ_EVENT_START :
+				bytes[0] = 0xFA;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi start\n");
+				break;
+
+			case SND_SEQ_EVENT_STOP :
+				bytes[0] = 0xFC;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi stop\n");
+				break;
+
+			case SND_SEQ_EVENT_CONTINUE :
+				bytes[0] = 0xFB;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi continue\n");
+				break;
+
 			default:
 				break;
 		}
 
-    bytes[1] = (bytes[1] & 0x7F);
+    		bytes[1] = (bytes[1] & 0x7F);
 
-    switch (ev->type) 
-		{
-      case SND_SEQ_EVENT_NOTEOFF:
-      case SND_SEQ_EVENT_NOTEON:
-      case SND_SEQ_EVENT_KEYPRESS: 
-      case SND_SEQ_EVENT_CONTROLLER: 
-      case SND_SEQ_EVENT_PITCHBEND:
-        bytes[2] = (bytes[2] & 0x7F);
+		switch (ev->type) {
+			case SND_SEQ_EVENT_NOTEOFF:
+			case SND_SEQ_EVENT_NOTEON:
+			case SND_SEQ_EVENT_KEYPRESS: 
+			case SND_SEQ_EVENT_CONTROLLER: 
+			case SND_SEQ_EVENT_PITCHBEND:
+				bytes[2] = (bytes[2] & 0x7F);
 				write(serial, bytes, 3);
-        break;
-      case SND_SEQ_EVENT_PGMCHANGE: 
-      case SND_SEQ_EVENT_CHANPRESS:
-        write(serial, bytes, 2);
-        break;
-    }
+			break;
+			case SND_SEQ_EVENT_PGMCHANGE: 
+			case SND_SEQ_EVENT_CHANPRESS:
+				write(serial, bytes, 2);
+			break;
+			case SND_SEQ_EVENT_CLOCK:
+			case SND_SEQ_EVENT_START:
+			case SND_SEQ_EVENT_STOP:
+			case SND_SEQ_EVENT_CONTINUE:
+				write(serial, bytes, 1);
+			break;
+		}
 
 		snd_seq_free_event(ev);
 
