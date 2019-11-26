@@ -20,6 +20,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <stdio.h>
@@ -44,6 +45,8 @@
 int run;
 int serial;
 int port_out_id;
+
+int current_time, last_time;
 
 /* --------------------------------------------------------------------- */
 // Program options
@@ -145,6 +148,20 @@ static char doc[]       = "ttymidi - Connect serial port devices to ALSA MIDI pr
 static struct argp argp = { options, parse_opt, 0, doc };
 arguments_t arguments;
 
+
+// timer
+long getMicroTime(){
+	struct timeval currentTime;
+	gettimeofday(&currentTime, NULL);
+	return currentTime.tv_sec * (int)1e6 + currentTime.tv_usec;
+}
+
+void elapsedTime(){
+	current_time = getMicroTime();
+	printf("%d\n", current_time - last_time);
+	last_time = current_time;
+	fflush(stdout);
+}
 
 
 /* --------------------------------------------------------------------- */
@@ -470,7 +487,7 @@ void* read_midi_from_alsa(void* seq)
 
 void* read_midi_from_serial_port(void* seq) 
 {
-	char buf[3], msg[MAX_MSG_SIZE];
+	char buf[3], msg[MAX_MSG_SIZE], buf2[3];
 	int i, msglen;
 	
 	/* Lets first fast forward to first status byte... */
@@ -489,7 +506,7 @@ void* read_midi_from_serial_port(void* seq)
 		if (arguments.printonly) 
 		{
 			read(serial, buf, 1);
-			printf("%x\t", (int) buf[0]&0xFF);
+			printf("%x\n", (int) buf[0]&0xFF);
 			fflush(stdout);
 			continue;
 		}
@@ -498,20 +515,24 @@ void* read_midi_from_serial_port(void* seq)
 		 * so let's align to the beginning of a midi command.
 		 */
 
-		int i = 1;
+		i = 1;
 
 		while (i < 3) {
 			read(serial, buf+i, 1);
-
+			buf2[0] = buf[i]; // for the rt messages
+			
+			// check if status byte
 			if (buf[i] >> 7 != 0) {
-				/* Status byte received and will always be first bit!*/
-				buf[0] = buf[i];
-				i = 1;
-				// midi realtime messages: clock, start, continue, stop 
-				if (buf[0] == 0xF8) i = 3;
-				else if (buf[0] == 0xFA) i = 3;
-				else if (buf[0] == 0xFB) i = 3;
-				else if (buf[0] == 0xFC) i = 3;
+				// midi realtime messages: clock, start, continue, stop
+				// just send em through, otherwise they mess with running status 
+				if (buf[i] == 0xF8)  parse_midi_command(seq, port_out_id, buf2);
+				else if (buf[i] == 0xFA)  parse_midi_command(seq, port_out_id, buf2);
+				else if (buf[i] == 0xFB)  parse_midi_command(seq, port_out_id, buf2);
+				else if (buf[i] == 0xFC)  parse_midi_command(seq, port_out_id, buf2);
+				else {
+					buf[0] = buf[i];
+					i = 1;
+				}
 			} else {
 				/* Data byte received */
 				if (i == 2) {
@@ -568,6 +589,9 @@ main(int argc, char** argv)
 	arg_set_defaults(&arguments);
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
+	// reset timer
+	current_time = getMicroTime();
+	
 	/*
 	 * Open MIDI output port
 	 */
