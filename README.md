@@ -1,6 +1,8 @@
 ttyMIDI is a GPL-licensed program that allows external serial devices to 
 interface with the ALSA sequencer.
 
+Modified version taking changes from forks https://github.com/oxytu/ttymidi and https://github.com/owenosborn/ttymidi
+
 
 COMPILATION
 
