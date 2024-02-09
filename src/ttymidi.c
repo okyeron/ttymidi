@@ -535,7 +535,7 @@ void write_midi_to_alsa(snd_seq_t* seq, int port_out_id, char *buf, int buflen)
 					snd_seq_ev_set_fixed(&ev);
 					ev.type = SND_SEQ_EVENT_SONGPOS;
 					ev.data.control.channel = channel;
-					ev.data.control.value = (param2 << 7) | param1);
+					ev.data.control.value = (param2 << 7) | param1;
 // 					bytes[1] = (int)ev->data.control.value & 0x7F;
 // 					bytes[2] = (int)ev->data.control.value >> 7;
 
