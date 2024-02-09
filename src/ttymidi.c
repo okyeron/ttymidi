@@ -518,7 +518,6 @@ void write_midi_to_alsa(snd_seq_t* seq, int port_out_id, char *buf, int buflen)
 int get_bytes_expected(int midicommand) {
 	if (!arguments.silent && arguments.verbose) 
 		printf("System %03u\n", midicommand);
-	break;
    switch (midicommand & 0xf0) {
       case 0x80: return 2; // note off
       case 0x90: return 2; // note on
