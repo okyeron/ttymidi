@@ -579,10 +579,10 @@ void* read_midi_from_serial_port(void* seq)
 		// Read a full midi message
 		while (bytesleft > 0) {
 		  read(serial, &readbyte, 1);
-			if (!arguments.silent && arguments.verbose) 
-				printf("System %03u\n", readbyte);
 		  bytesleft--;
 		  if ((readbyte & 0x80) && (readbyte != 0xF7)) {
+				if (!arguments.silent && arguments.verbose) 
+					printf("System %03u\n", readbyte);
 				buflen = 0; // Start of a new message
 				buf[buflen++] = readbyte; // Store byte in the buffer
 				bytesleft = get_bytes_expected(readbyte); // Determine the length of the message
