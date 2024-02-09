@@ -308,6 +308,14 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 					printf("Alsa    midi continue\n");
 				break;
 
+			case SND_SEQ_EVENT_SONGPOS:
+				bytes[0] = 0xF2;
+				bytes[1] = (int)ev->data.control.param;
+				bytes[2] = (int)ev->data.control.value;
+				if (!arguments.silent && arguments.verbose)
+					printf("Alsa    0x%02X Song Position Pointer  %03u %03u %03u\n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1], bytes[2]);
+				break;
+
 
             case SND_SEQ_EVENT_SYSEX:
                 sysex_len = ev->data.ext.len;
@@ -354,7 +362,8 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 			case SND_SEQ_EVENT_STOP:
 			case SND_SEQ_EVENT_CONTINUE:
 				write(serial, bytes, 1);
-			break;			
+			break;	
+			case SND_SEQ_EVENT_SONGPOS:		
 			case SND_SEQ_EVENT_SYSEX:
 			//sysex addition - wrote this in the case statement
 				if (sysex_len > 0) {
@@ -512,6 +521,13 @@ void write_midi_to_alsa(snd_seq_t* seq, int port_out_id, char *buf, int buflen)
 						printf("MIDI Stop         %03u\n", buf[0]);
 					snd_seq_ev_set_fixed(&ev);
 					ev.type = SND_SEQ_EVENT_STOP;
+					break;
+
+				case 0xF2:
+					if (!arguments.silent && arguments.verbose)
+						printf("Serial  0x%02X SPP          %03u %03u %03u\n", operation, channel, param1, param2);
+					snd_seq_ev_set_fixed(&ev);
+					ev.type = SND_SEQ_EVENT_SONGPOS;
 					break;
 
 				case 0xF0: 
