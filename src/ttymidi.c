@@ -363,7 +363,7 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 				write(serial, bytes, 1);
 			break;	
 			case SND_SEQ_EVENT_SONGPOS:	
-				write(serial, bytes, 2);
+				write(serial, bytes, 3);
 			break;	
 			case SND_SEQ_EVENT_SYSEX:
 			//sysex addition - wrote this in the case statement
