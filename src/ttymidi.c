@@ -284,6 +284,31 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 					printf("Alsa    0x%02X Pitch bend         %03u %5d\n", bytes[0]&0xF0, bytes[0]&0xF, ev->data.control.value);
 				break;
 				
+			case SND_SEQ_EVENT_CLOCK :
+				bytes[0] = 0xF8;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi clock\n");
+				break;
+
+			case SND_SEQ_EVENT_START :
+				bytes[0] = 0xFA;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi start\n");
+				break;
+
+			case SND_SEQ_EVENT_STOP :
+				bytes[0] = 0xFC;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi stop\n");
+				break;
+
+			case SND_SEQ_EVENT_CONTINUE :
+				bytes[0] = 0xFB;
+				if (!arguments.silent && arguments.verbose) 
+					printf("Alsa    midi continue\n");
+				break;
+
+
             case SND_SEQ_EVENT_SYSEX:
                 sysex_len = ev->data.ext.len;
                 if (!arguments.silent && arguments.verbose)
@@ -545,12 +570,10 @@ int get_bytes_expected(int midicommand) {
 
 void* read_midi_from_serial_port(void* seq)
 {
-// 	char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
-// 	int buflen, bytesleft = BUF_SIZE - 1;
+	char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
+	int buflen, bytesleft = BUF_SIZE - 1;
 
 	/* Lets first fast forward to first status byte... */
-	unsigned char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
-    int buflen, bytesleft = BUF_SIZE - 1; 
     
 	if (!arguments.printonly) 
 	{
@@ -566,7 +589,7 @@ void* read_midi_from_serial_port(void* seq)
 		 * comes through the serial port.
 		 */
 
-		if (arguments.verbose)
+		if (arguments.printonly)
 		{
 			read(serial, buf, 1);
 			printf("%02X\t", (int) buf[0]&0xFF);
