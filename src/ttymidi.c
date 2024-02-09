@@ -577,30 +577,26 @@ void* read_midi_from_serial_port(void* seq)
 		}
 		
 		// Read a full midi message
-		while (bytesleft > 0)){ 
-			char readbyte; 
-			read(serial, &readbyte, 1); 
-			snd_rawmidi_write(handle_out, &readbyte, 1);
+		while (bytesleft > 0) {
+		  read(serial, &readbyte, 1);
+			if (!arguments.silent && arguments.verbose) 
+				printf("System %03u\n", readbyte);
+		  bytesleft--;
+		  if ((readbyte & 0x80) && (readbyte != 0xF7)) {
+				buflen = 0; // Start of a new message
+				buf[buflen++] = readbyte; // Store byte in the buffer
+				bytesleft = get_bytes_expected(readbyte); // Determine the length of the message
+		  }
+		  else {
+				buf[buflen++] = readbyte; // Store byte in the buffer
+				if (readbyte == 0xF7) bytesleft = 0;
+		  }
 		}
 		
-// 		while (bytesleft > 0) {
-// 		  read(serial, &readbyte, 1);
-// 		  bytesleft--;
-// 		  if ((readbyte & 0x80) && (readbyte != 0xF7)) {
-// 				buflen = 0; // Start of a new message
-// 				buf[buflen++] = readbyte; // Store byte in the buffer
-// 				bytesleft = get_bytes_expected(readbyte); // Determine the length of the message
-// 		  }
-// 		  else {
-// 				buf[buflen++] = readbyte; // Store byte in the buffer
-// 				if (readbyte == 0xF7) bytesleft = 0;
-// 		  }
-// 		}
-// 		
-// 		bytesleft = BUF_SIZE - 1; 
-// 		
-// 		// Write it to alsa if the buffer contains a valid message
-// 		if (buf[0] & 0x80) write_midi_to_alsa(seq, port_out_id, buf, buflen);
+		bytesleft = BUF_SIZE - 1; 
+		
+		// Write it to alsa if the buffer contains a valid message
+		if (buf[0] & 0x80) write_midi_to_alsa(seq, port_out_id, buf, buflen);
 				
 	}
 }
