@@ -310,8 +310,8 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 
 			case SND_SEQ_EVENT_SONGPOS:
 				bytes[0] = 0xF2;
-				bytes[1] = ev->data.control.param;
-				bytes[2] = ev->data.control.value  << 7;
+				bytes[1] = (int)ev->data.control.param;
+				bytes[2] = (int)ev->data.control.value;
 				if (!arguments.silent && arguments.verbose)
 					printf("Alsa    0x%02X Song Position Pointer  %03u %03u %03u\n", bytes[0], bytes[1], bytes[2]);
 				break;
