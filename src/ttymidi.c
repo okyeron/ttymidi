@@ -516,6 +516,9 @@ void write_midi_to_alsa(snd_seq_t* seq, int port_out_id, char *buf, int buflen)
 #define BUF_SIZE 1024 // Size of the serial midi buffer - determines the maximum size of sysex messages
 
 int get_bytes_expected(int midicommand) {
+	if (!arguments.silent && arguments.verbose) 
+		printf("System %03u\n", midicommand);
+	break;
    switch (midicommand & 0xf0) {
       case 0x80: return 2; // note off
       case 0x90: return 2; // note on
@@ -532,6 +535,7 @@ int get_bytes_expected(int midicommand) {
       case 0xf2: return 2; // spp
 
       case 0xf0: 
+
 		if (midicommand == 0xF0) return BUF_SIZE - 1; // Sysex
 // 		else if (midicommand == 0xf8) return 0; // clock
 // 		else if (midicommand == 0xfa) return 0; // start
