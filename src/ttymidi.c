@@ -366,7 +366,7 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 				write(serial, bytes, 1);
 			break;	
 			case SND_SEQ_EVENT_SONGPOS:
-				bytes[2] = (bytes[2] & 0x7F);	
+// 				bytes[2] = (bytes[2] & 0x7F);	
 				write(serial, bytes, 3);
 			break;	
 			case SND_SEQ_EVENT_SYSEX:
