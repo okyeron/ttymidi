@@ -349,6 +349,12 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 				write(serial, bytes, 2);
 			break;
 			
+			case SND_SEQ_EVENT_CLOCK:
+			case SND_SEQ_EVENT_START:
+			case SND_SEQ_EVENT_STOP:
+			case SND_SEQ_EVENT_CONTINUE:
+				write(serial, bytes, 1);
+			break;			
 			case SND_SEQ_EVENT_SYSEX:
 			//sysex addition - wrote this in the case statement
 				if (sysex_len > 0) {
