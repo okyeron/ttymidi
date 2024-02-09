@@ -312,7 +312,7 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 				bytes[0] = 0xF2;
 // 				bytes[1] = ev->data.control.param;
 // 				bytes[2] = ev->data.control.value;
-				ev->data.control.value += 8192;
+// 				ev->data.control.value += 8192; //16383
 				bytes[1] = (int)ev->data.control.value & 0x7F;
 				bytes[2] = (int)ev->data.control.value >> 7;
 				if (!arguments.silent && arguments.verbose)
