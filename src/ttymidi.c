@@ -494,6 +494,7 @@ void write_midi_to_alsa(snd_seq_t* seq, int port_out_id, char *buf, int buflen)
 					}
 					// Send sysex message
 					snd_seq_ev_set_sysex(&ev, buflen, buf);
+					ev.type = SND_SEQ_EVENT_SYSEX;
 					break;
 
 				default:
