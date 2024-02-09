@@ -535,7 +535,7 @@ int get_bytes_expected(int midicommand) {
 			case 0xfb: return 0; // continue
 			case 0xfc: return 0; // stop
 			case 0xf2: return 2; // spp
-			case default: return 0; // Other controller
+			default: return 0; // Other controller
 		}
 // 		if (midicommand == 0xF0) return BUF_SIZE - 1; // Sysex
 //		else return 0; // Other controller
