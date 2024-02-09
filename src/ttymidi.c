@@ -566,7 +566,7 @@ void* read_midi_from_serial_port(void* seq)
 		 * comes through the serial port.
 		 */
 
-		if (!arguments.silent && arguments.verbose)
+		if (arguments.verbose)
 		{
 			read(serial, buf, 1);
 			printf("%02X\t", (int) buf[0]&0xFF);
