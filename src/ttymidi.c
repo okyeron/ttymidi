@@ -517,7 +517,7 @@ void write_midi_to_alsa(snd_seq_t* seq, int port_out_id, char *buf, int buflen)
 
 int get_bytes_expected(int midicommand) {
 	if (!arguments.silent && arguments.verbose) 
-		printf("System %03u\n", midicommand);
+		printf("System %02X\n", midicommand);
    switch (midicommand & 0xf0) {
       case 0x80: return 2; // note off
       case 0x90: return 2; // note on
@@ -526,34 +526,32 @@ int get_bytes_expected(int midicommand) {
       case 0xc0: return 1; // patch change
       case 0xd0: return 1; // channel pressure
       case 0xe0: return 1; // pitch bend
-
-      case 0xf8: return 0; // clock
-      case 0xfa: return 0; // start
-      case 0xfb: return 0; // continue
-      case 0xfc: return 0; // stop
-      case 0xf2: return 2; // spp
-
+      
       case 0xf0: 
-
-		if (midicommand == 0xF0) return BUF_SIZE - 1; // Sysex
-// 		else if (midicommand == 0xf8) return 0; // clock
-// 		else if (midicommand == 0xfa) return 0; // start
-// 		else if (midicommand == 0xfb) return 0; // continue
-// 		else if (midicommand == 0xfc) return 0; // stop
-// 		else if (midicommand == 0xf2) return 2; // spp
-		
-		else return 0; // Other controller
+		switch (midicommand) {
+			case 0xF0: return BUF_SIZE - 1; // Sysex
+			case 0xf8: return 0; // clock
+			case 0xfa: return 0; // start
+			case 0xfb: return 0; // continue
+			case 0xfc: return 0; // stop
+			case 0xf2: return 2; // spp
+			case default: return 0; // Other controller
+		}
+// 		if (midicommand == 0xF0) return BUF_SIZE - 1; // Sysex
+//		else return 0; // Other controller
    }
    return 0;
 }
 
 void* read_midi_from_serial_port(void* seq)
 {
-	char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
-	int buflen, bytesleft = BUF_SIZE - 1;
+// 	char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
+// 	int buflen, bytesleft = BUF_SIZE - 1;
 
 	/* Lets first fast forward to first status byte... */
-	
+	unsigned char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
+    int buflen, bytesleft = BUF_SIZE - 1; 
+    
 	if (!arguments.printonly) 
 	{
 		do read(serial, buf, 1);
@@ -581,8 +579,6 @@ void* read_midi_from_serial_port(void* seq)
 		  read(serial, &readbyte, 1);
 		  bytesleft--;
 		  if ((readbyte & 0x80) && (readbyte != 0xF7)) {
-				if (!arguments.silent && arguments.verbose) 
-					printf("System %03u\n", readbyte);
 				buflen = 0; // Start of a new message
 				buf[buflen++] = readbyte; // Store byte in the buffer
 				bytesleft = get_bytes_expected(readbyte); // Determine the length of the message
