@@ -1,6 +1,8 @@
 ttyMIDI is a GPL-licensed program that allows external serial devices to 
 interface with the ALSA sequencer.
 
+Modified version taking changes from forks https://github.com/oxytu/ttymidi and https://github.com/owenosborn/ttymidi
+
 
 COMPILATION
 
@@ -68,7 +70,7 @@ transmitted.  To simplify the decoding process, ttyMIDI does not support
 "running status", and it also forces every command into 3 bytes.  So even
 commands which only have 1 parameter must transmit byte #3 (transmitting a 0 in
 this case).  This is described in more details in the table below:
-
+```
 byte1       byte2                     byte3                     Command name
 
 0x80-0x8F   Key # (0-127)             Off Velocity (0-127)      Note OFF
@@ -83,5 +85,6 @@ Not implemented:
 0xF0-0xF0   Manufacturer's ID         Model ID                  System 
 
 Byte #1 is given as COMMAND + CHANNEL.  So, for example, 0xE3 is the Pitch Bend
-command (0xE0) for channel 4 (0x03).  
 
+command (0xE0) for channel 4 (0x03).  
+```
