@@ -597,56 +597,97 @@ int get_bytes_expected(int midicommand) {
    return 0;
 }
 
+/* data bytes that follow a status byte */
+static int data_bytes(unsigned char status)
+{
+	switch (status & 0xF0) {
+		case 0x80: case 0x90: case 0xA0: case 0xB0: case 0xE0: return 2;
+		case 0xC0: case 0xD0: return 1;
+	}
+	switch (status) {
+		case 0xF1: case 0xF3: return 1;
+		case 0xF2: return 2;
+	}
+	return 0;
+}
+
+/*
+ * read the serial MIDI stream: running status (data bytes without a new status
+ * byte reuse the last one), real-time bytes (0xF8..0xFF) passed on at once even
+ * in the middle of a message, active sensing (0xFE) ignored, sysex collected
+ * up to 0xF7
+ */
 void* read_midi_from_serial_port(void* seq)
 {
-	char buf[BUF_SIZE], readbyte, msg[MAX_MSG_SIZE];
-	int buflen, bytesleft = BUF_SIZE - 1;
-
-	/* Lets first fast forward to first status byte... */
-    
-	if (!arguments.printonly) 
-	{
-		do read(serial, buf, 1);
-		while (buf[0] >> 7 == 0);
-	}
+	char buf[BUF_SIZE];
+	unsigned char b, status = 0;
+	int buflen = 0, need = 0, sysex = 0;
 
 	while (run)
 	{
-		
-		/*
-		 * super-debug mode: only print to screen whatever
-		 * comes through the serial port.
-		 */
+		if (read(serial, &b, 1) != 1) continue;
 
+		/* super-debug mode: only print whatever comes through the serial port */
 		if (arguments.printonly)
 		{
-			read(serial, buf, 1);
-			printf("%02X\t", (int) buf[0]&0xFF);
+			printf("%02X\t", b);
 			fflush(stdout);
 			continue;
 		}
-		
-		// Read a full midi message
-		while (bytesleft > 0) {
-		  read(serial, &readbyte, 1);
-		  bytesleft--;
-		  if ((readbyte & 0x80) && (readbyte != 0xF7)) {
-				buflen = 0; // Start of a new message
-				buf[buflen++] = readbyte; // Store byte in the buffer
-				bytesleft = get_bytes_expected(readbyte); // Determine the length of the message
-		  }
-		  else {
-				buf[buflen++] = readbyte; // Store byte in the buffer
-				if (readbyte == 0xF7) bytesleft = 0;
-		  }
+
+		if (b >= 0xF8) {                            /* real-time */
+			if (b != 0xFE) {
+				char rt = (char) b;
+				write_midi_to_alsa(seq, port_out_id, &rt, 1);
+			}
+			continue;
 		}
-		
-		bytesleft = BUF_SIZE - 1; 
-		
-		// Write it to alsa if the buffer contains a valid message
-		if (buf[0] & 0x80) write_midi_to_alsa(seq, port_out_id, buf, buflen);
-				
+		if (b == 0xF0) {                            /* sysex start */
+			sysex = 1;
+			status = 0;
+			buflen = 0;
+			buf[buflen++] = (char) b;
+			continue;
+		}
+		if (b == 0xF7) {                            /* sysex end */
+			if (sysex && buflen < BUF_SIZE) {
+				buf[buflen++] = (char) b;
+				write_midi_to_alsa(seq, port_out_id, buf, buflen);
+			}
+			sysex = 0;
+			buflen = 0;
+			continue;
+		}
+		if (b & 0x80) {                             /* a new status byte */
+			sysex = 0;
+			status = (b < 0xF0) ? b : 0;            /* system common cancels running status */
+			buflen = 0;
+			buf[buflen++] = (char) b;
+			need = data_bytes(b);
+			if (need == 0) {                        /* e.g. tune request */
+				write_midi_to_alsa(seq, port_out_id, buf, buflen);
+				buflen = 0;
+			}
+			continue;
+		}
+
+		/* a data byte */
+		if (sysex) {
+			if (buflen < BUF_SIZE) buf[buflen++] = (char) b;
+			continue;
+		}
+		if (buflen == 0) {                          /* running status */
+			if (!status) continue;              /* no status yet: skip */
+			buf[buflen++] = (char) status;
+			need = data_bytes(status);
+		}
+		buf[buflen++] = (char) b;
+		if (--need <= 0) {
+			write_midi_to_alsa(seq, port_out_id, buf, buflen);
+			buflen = 0;
+		}
 	}
+	return NULL;
 }
 
 
